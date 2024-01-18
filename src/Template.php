@@ -20,6 +20,8 @@ class Template
         $path = $this->getPath($template);
         $this->checkPath($path);
         $content = $this->getContent($path);
+        $functions = new TemplateFunctions($this->path, $content, $data);
+        $content = $functions->functions();
         $content = $this->getData($content, $data);
         echo $content;
     }
