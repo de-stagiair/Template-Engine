@@ -45,11 +45,22 @@ class Template
     {
         return file_get_contents($path);
     }
+
     private function getData(string $content, array $data): string
     {
-        foreach ($data as $key => $value) {
-            $content = str_replace("[% $key %]", $value, $content);
-        }
+          foreach ($data as $key => $value)
+          {
+              $variable = '[% '. $key .' %]';
+
+              if (is_array($value)) {
+                $value = implode(' ',$value);
+              }
+              if (is_int($value)){
+                  $value = (string)$value;
+              }
+
+              $content = str_replace($variable, $value, $content);
+          }
         return $content;
     }
 }
