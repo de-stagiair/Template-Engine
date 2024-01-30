@@ -53,12 +53,11 @@ class Template
               $variable = '[% '. $key .' %]';
 
               if (is_array($value)) {
-                $value = implode(' ',$value);
+                $value = implode(', ',$value);
               }
               if (is_int($value)){
                   $value = (string)$value;
               }
-
               $content = str_replace($variable, $value, $content);
           }
         return $content;
