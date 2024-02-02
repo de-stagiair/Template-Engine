@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace Dinho\TemplateEngine;
 
-use Dinho\TemplateEngine\Template;
-
 class TemplateFunctions
 {
     private array $block = [];
@@ -16,40 +14,58 @@ class TemplateFunctions
 
     public function functions(): string
     {
+        ini_set("xdebug.var_display_max_children", '-1');
+        ini_set("xdebug.var_display_max_data", '-1');
+        ini_set("xdebug.var_display_max_depth", '-1');
+
         $content = $this->content;
         $data = $this->data;
-        $content = $this->extendHolder($content);
-        return $this->replaceForeach($content, $data);
+        $content = $this->replaceForeach($content, $data);
+        $this->getBlocks($content);
+        return $this->replaceBlock($content);
     }
 
-    private function extendHolder(string $content):string
+    private function getBlocks(string $content): array
     {
-        return preg_replace_callback('/\[%(\s*EXTENDS\s*)(\w+\.php)\s*%]/s', function ($matches){
-            $file = $this->path .DIRECTORY_SEPARATOR. $matches[2];
-            return file_get_contents($file);
-        } ,$content);
+        preg_match_all('/\[% BLOCK (.*?) %](.*?)\[% ENDBLOCK %]/s', $content, $matches);
+        foreach ($matches[0] as $index => $match){
+            $this->block[$matches[1][$index]] = $matches[2][$index];
+        }
+        return $this->block;
     }
+    private function replaceBlock(string $content): string
+    {
+        foreach ($this->block as $key => $value) {
+            $placeholder = "[%" . " BLOCK $key %" . "]";
+            $endPlaceholder = "[%" . " ENDBLOCK %" . "]";
+            $startPosition = strpos($content, $placeholder);
+            $endPosition = strpos($content, $endPlaceholder, $startPosition);
+
+            if ($startPosition !== false && $endPosition !== false) {
+                $replacePart = substr($content, $startPosition, $endPosition - $startPosition + strlen($endPlaceholder));
+                $content = str_replace($replacePart, $value, $content);
+                var_dump($content);
+            }
+        }
+        //var_dump($content);
+        return $content;
+    }
+
 
     private function replaceForeach(string $content, array $data): string
     {
-        return preg_replace_callback('/\[%\s*foreach\s+(.*?)\s+as\s+(.*?)\s*%]\s*(.*?)\s*\[%\s*endforeach\s*%]/s', function ($matches) use ($content, $data) {
+        return preg_replace_callback('/\[%\s*foreach\s+(.*?)\s+as\s+(.*?)\s*%](.*?)\[%\s*endforeach\s*%]/s', function ($matches) use ($data) {
             $variableName = $matches[1];
             $replacedVariable = $matches[2];
             $loopContent = $matches[3];
             $replacement = '';
 
-            foreach ($data[$variableName] as $items)
-            {
-                $contentStorage = [$items];
-                foreach ($contentStorage as $item)
-                {
-                    $variable = '[% '. $replacedVariable .' %]';
-                    $replacedContent = str_replace($variable, $item, $loopContent);
-                    $replacement .= $replacedContent;
-                }
+            foreach ($data[$variableName] as $item) {
+                $variable = '[% ' . $replacedVariable . ' %]';
+                $replacedContent = str_replace($variable, $item, $loopContent);
+                $replacement .= $replacedContent;
             }
-            $output = str_replace($matches[0] ,$replacement, $content);
-            return $output;
+            return $replacement;
         }, $content);
     }
 }
